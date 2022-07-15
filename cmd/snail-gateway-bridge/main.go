@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"./cmd/snail-gateway-bridge/cmd"
+	"snail-gateway-bridge/cmd/snail-gateway-bridge/cmd"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 	log "github.com/sirupsen/logrus"

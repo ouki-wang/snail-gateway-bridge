@@ -5,6 +5,7 @@ build:
 	@echo "Compiling source"
 	@rm -rf build
 	@mkdir build
+	@cp snail-gateway-bridge.toml build/
 	go build -ldflags "-s -w -X main.version=v1.0.0" -o build/snail-gateway-bridge.exe cmd/snail-gateway-bridge/main.go
 
 clean:
