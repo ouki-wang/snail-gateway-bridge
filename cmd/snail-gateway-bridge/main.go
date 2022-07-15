@@ -38,6 +38,6 @@ func init() {
 }
 
 func main() {
-	log.WithField("name", "wanghui").Info("start.....")
+	log.WithField("author", "wanghui").Info("start.....")
 	cmd.Execute("v0.0.1")
 }
