@@ -1,6 +1,11 @@
 package packets
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+)
 
 type PacketType byte
 
@@ -38,4 +43,56 @@ func protocolSupported(p uint8) bool {
 		return true
 	}
 	return false
+}
+
+type ExpandedTime time.Time
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t ExpandedTime) MarshalJSON() ([]byte, error) {
+	return []byte(time.Time(t).UTC().Format(`"2006-01-02 15:04:05 MST"`)), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (t *ExpandedTime) UnmarshalJSON(data []byte) error {
+	t2, err := time.Parse(`"2006-01-02 15:04:05 MST"`, string(data))
+	if err != nil {
+		return err
+	}
+	*t = ExpandedTime(t2)
+	return nil
+}
+
+type CompactTime time.Time
+
+type DatR struct {
+	LRFHSS string
+	LoRa   string
+	FSK    uint32
+}
+
+func (d *DatR) MarshalJSON() ([]byte, error) {
+	if d.LoRa != "" {
+		return []byte(`"` + d.LoRa + `"`), nil
+	}
+	if d.LRFHSS != "" {
+		return []byte(`"` + d.LRFHSS + `"`), nil
+	}
+	return []byte(strconv.FormatUint(uint64(d.FSK), 10)), nil
+}
+
+func (d *DatR) UnmarshalJSON(data []byte) error {
+	i, err := strconv.ParseUint(string(data), 10, 32)
+	if err != nil {
+		// remove the trailing and leading quotes
+		str := strings.Trim(string(data), `"`)
+
+		if strings.HasPrefix(str, "SF") {
+			d.LoRa = str
+		} else {
+			d.LRFHSS = str
+		}
+		return nil
+	}
+	d.FSK = uint32(i)
+	return nil
 }

@@ -10,7 +10,6 @@ var backend Backend
 
 func Setup(conf config.Config) error {
 	var err error
-	fmt.Println("conf.Backend.Type ==== ", conf.Backend.Type)
 	switch conf.Backend.Type {
 	case "semtech_udp":
 		backend, err = semtechudp.NewBackend(conf)

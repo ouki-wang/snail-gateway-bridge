@@ -50,7 +50,7 @@ marshaler="json"
     # Generic MQTT authentication.
     [integration.mqtt.auth.generic]
     # MQTT server (e.g. scheme://host:port where scheme is tcp, ssl or ws)
-    server="tcp://192.168.1.130:1883"
+    server="tcp://192.168.1.35:1883"
 
     # Connect with the given username (optional)
     username=""

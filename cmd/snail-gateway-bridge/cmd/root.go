@@ -123,10 +123,13 @@ func initConfig() {
 		log.WithError(err).Fatal("unmarshal config error")
 	}
 
-	//fmt.Println("----------------------")
+	//fmt.Println("----------------------", config.C.Integration.MQTT.Auth.Generic)
 	//for _, k := range viper.GetViper().AllKeys() {
 	//	fmt.Println(k, viper.GetString(k))
 	//}
+	if config.C.Integration.MQTT.Auth.Generic.Server != "" {
+		config.C.Integration.MQTT.Auth.Generic.Servers = []string{config.C.Integration.MQTT.Auth.Generic.Server}
+	}
 	version = "v0.0.1"
 }
 

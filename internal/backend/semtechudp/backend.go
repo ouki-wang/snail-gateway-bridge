@@ -2,6 +2,7 @@ package semtechudp
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"snail-gateway-bridge/internal/backend/semtechudp/packets"
@@ -25,7 +26,9 @@ type Backend struct {
 	wg     sync.WaitGroup
 	conn   *net.UDPConn
 	closed bool
-	//gateways gateways
+	//gateways     gateways
+	fakeRxTime   bool
+	skipCRCCheck bool
 }
 
 func NewBackend(conf config.Config) (*Backend, error) {
@@ -39,8 +42,10 @@ func NewBackend(conf config.Config) (*Backend, error) {
 		return nil, errors.Wrap(err, "listen udp error")
 	}
 	b := &Backend{
-		conn:        conn,
-		udpSendChan: make(chan udpPacket),
+		conn:         conn,
+		udpSendChan:  make(chan udpPacket),
+		fakeRxTime:   conf.Backend.SemtechUDP.FakeRxTime,
+		skipCRCCheck: conf.Backend.SemtechUDP.SkipCRCCheck,
 	}
 	return b, nil
 }
@@ -201,5 +206,66 @@ func (b *Backend) handlePullData(up udpPacket) error {
 }
 
 func (b *Backend) handlePushData(up udpPacket) error {
+	fmt.Println("handlePushData...")
+
 	var p packets.PushDataPacket
+	if err := p.UnmarshalBinary(up.data); err != nil {
+		return err
+	}
+	result, _ := json.Marshal(p)
+	fmt.Println(string(result))
+
+	ack := packets.PushACKPacket{
+		ProtocolVersion: p.ProtocolVersion,
+		RandomToken:     p.RandomToken,
+	}
+	result, _ = json.Marshal(ack)
+	fmt.Println(string(result))
+
+	bytes, err := ack.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	b.udpSendChan <- udpPacket{
+		addr: up.addr,
+		data: bytes,
+	}
+
+	stats, err := p.GetGatewayStats()
+	if err != nil {
+		return errors.Wrap(err, "get stats error")
+	}
+	if stats != nil {
+		if up.addr.IP.IsLoopback() {
+			ip, err := getOutboundIP()
+			if err != nil {
+				log.WithError(err).Error("backend/semtechudp: get outbound ip error")
+			} else {
+				stats.Ip = ip.String()
+			}
+		} else {
+			stats.Ip = up.addr.IP.String()
+		}
+	}
+	fmt.Println("stats", stats)
+	uplinkFrames, err := p.GetUplinkFrames(b.skipCRCCheck, b.fakeRxTime)
+
+	if err != nil {
+		return errors.Wrap(err, "get uplink frames error")
+	}
+	return nil
+}
+
+func getOutboundIP() (net.IP, error) {
+	// this does not actually connect to 8.8.8.8, unless the connection is
+	// used to send UDP frames
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP, nil
 }

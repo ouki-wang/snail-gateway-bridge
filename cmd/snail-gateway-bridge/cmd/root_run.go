@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"snail-gateway-bridge/internal/backend"
 	"snail-gateway-bridge/internal/config"
+	"snail-gateway-bridge/internal/integration"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -19,6 +20,8 @@ func run(cmd *cobra.Command, args []string) error {
 		setLogLevel,
 		printStartMessage,
 		setupBackend,
+		setupIntegration,
+		startIntegration,
 		startBackend,
 	}
 
@@ -57,9 +60,22 @@ func setupBackend() error {
 }
 
 func startBackend() error {
-	fmt.Println("startBackend")
 	if err := backend.GetBackend().Start(); err != nil {
 		return errors.Wrap(err, "start backend error")
+	}
+	return nil
+}
+
+func setupIntegration() error {
+	if err := integration.Setup(config.C); err != nil {
+		return errors.Wrap(err, "start integration error")
+	}
+	return nil
+}
+
+func startIntegration() error {
+	if err := integration.GetIntegration().Start(); err != nil {
+		return errors.Wrap(err, "start integration error")
 	}
 	return nil
 }
